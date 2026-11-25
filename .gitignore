@@ -1,0 +1,8 @@
+# Dependências do Node.js
+node_modules/
+
+# Chave privada do Firebase
+serviceAccountKey.json
+
+# Variáveis de ambiente
+.env

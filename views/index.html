@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATIVIDADE - REDE SOCIAL</title>
+   <link rel="stylesheet" href="/styles.css">
+
+    <!-- Importação do jQuery e Socket.io via CDN -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+</head>
+<body>
+
+    <div class="header_container">
+        <img src="./images/rede.png" />
+        <h1>ATIVIDADE - REDE SOCIAL</h1>
+    </div>
+
+    <div class="button_post_container">
+        <button name="btn_post" id="btn_post">POST</button>
+    </div>
+
+    <div class="posts_container"></div>
+
+    <!-- Formulário modal -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+
+            <div class="form_post_container">
+                <h4>FAÇA UM POST</h4>
+
+                <form name="frm_post" id="frm_post">
+                    <input type="text" name="txt_titulo" id="txt_titulo"
+                        placeholder="TITULO DO POST" required>
+                    <br />
+                    <input type="text" name="txt_post" id="txt_post"
+                        placeholder="TEXTO DO POST" required>
+                    <br />
+                    <button type="submit" name="btn_postar"
+                        id="btn_postar">POSTAR</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Conecta o front-end ao servidor Socket.io
+        const socket = io();
+
+        // Armazena as publicações recebidas
+        const posts = new Map();
+
+        // Abre o formulário modal
+        $('#btn_post').on('click', function () {
+            $('#myModal').show();
+        });
+
+        // Fecha o formulário modal
+        $('.close').on('click', function () {
+            $('#myModal').hide();
+        });
+
+        // Renderiza as publicações
+        function renderizarPosts() {
+            $('.posts_container').empty();
+
+            const lista = Array.from(posts.values());
+
+            // Ordena da publicação mais recente para a mais antiga
+            lista.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+            lista.forEach(function (post) {
+                const dataFormatada = new Date(post.data)
+                    .toLocaleString('pt-BR');
+
+                const container = $('<div>').addClass('post_container');
+
+                container.append($('<h4>').text(post.titulo));
+                container.append($('<p>').text(post.texto));
+                container.append($('<span>').text('[' + dataFormatada + ']'));
+
+                $('.posts_container').append(container);
+            });
+        }
+
+        // Recebe as publicações anteriores
+        socket.on('previousMessage', function (publicacoes) {
+            publicacoes.forEach(function (post) {
+                posts.set(post.id, post);
+            });
+
+            renderizarPosts();
+        });
+
+        // Recebe novas publicações em tempo real
+        socket.on('receivedMessage', function (post) {
+            posts.set(post.id, post);
+            renderizarPosts();
+        });
+
+        // Envia uma nova publicação ao servidor
+        $('#frm_post').on('submit', function (event) {
+            event.preventDefault();
+
+            const titulo = $('#txt_titulo').val().trim();
+            const texto = $('#txt_post').val().trim();
+
+            // Validação dos campos
+            if (!titulo || !texto) {
+                alert('Preencha todos os campos!');
+                return;
+            }
+
+            if (!socket.connected) {
+                alert('Servidor desconectado. Tente novamente.');
+                return;
+            }
+
+            // Envia os dados ao back-end
+            socket.emit('sendMessage', {
+                titulo: titulo,
+                texto: texto
+            });
+
+            // Limpa os campos e fecha o modal
+            $('#frm_post')[0].reset();
+            $('#myModal').hide();
+        });
+    </script>
+
+</body>
+</html>
